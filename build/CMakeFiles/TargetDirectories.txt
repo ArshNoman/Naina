@@ -1,0 +1,3 @@
+/Users/arshnoman/Desktop/-/projects/naina/build/CMakeFiles/naina.dir
+/Users/arshnoman/Desktop/-/projects/naina/build/CMakeFiles/edit_cache.dir
+/Users/arshnoman/Desktop/-/projects/naina/build/CMakeFiles/rebuild_cache.dir
