@@ -12,7 +12,7 @@ namespace naina {
     class BlackBoxLogger {
     public:
         explicit BlackBoxLogger(const std::string& session_dir); // create a logger to write into session directory
-        ~BlackBoxLogger(); // flish and close files
+        ~BlackBoxLogger(); // flush and close files
 
         BlackBoxLogger(const BlackBoxLogger&) = delete; // create a rule that says this object is non-copyable
         BlackBoxLogger& operator=(const BlackBoxLogger&) = delete; // another rule saying this object is non-reassignable
