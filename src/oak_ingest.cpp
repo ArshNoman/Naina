@@ -1,15 +1,16 @@
 #include "oak_ingest.hpp"
 
-//#if NAINA_ENABLE_OAK // isolates Oak and DepthAI dependencies from everything else
-
+#if NAINA_ENABLE_OAK // isolates Oak and DepthAI dependencies from everything else
 
 // Check DepathAI C++ docs for a better understanding of the syntax
 // https://docs.luxonis.com/software-v3/depthai/api/cpp
 
 #include "time_utils.hpp"
 #include <depthai/depthai.hpp>
+#include <opencv2/opencv.hpp>
 #include <atomic>
 #include <thread>
+#define DEPTHAI_OPENCV_SUPPORT
 
 namespace naina {
 
@@ -69,44 +70,44 @@ void OakIngest::start(const OakCallback& cb, int left_width,int left_height, int
             OakFrame f{}; // OakFrame data container that is zero-initialized
             f.host_t_ns = now_monotonic_ns(); // append current timestamp
 
-            cv::Mat leftMat = left->getCvFrame();  // likely CV_8UC1 or CV_8UC3
-            if (leftMat.channels() == 3) {
-                cv::cvtColor(leftMat, f.left_gray_u8, cv::COLOR_BGR2GRAY);
+            cv::Mat leftMat = left->getCvFrame();  // convert DepthAI frame to OpenCV matrix (IGNORE RED LINE)
+            if (leftMat.channels() == 3) { // if colored image
+                cv::cvtColor(leftMat, f.left_gray_u8, cv::COLOR_BGR2GRAY); // convert to grayscale
             } else {
                 f.left_gray_u8 = leftMat;
             }
 
-            // disparity from DepthAI is usually 8 bit, but we store as 16 bit for uniformity
-            cv::Mat dispMat = disp->getFrame();  // raw cv::Mat like type
-            if (dispMat.type() == CV_8UC1) {
-                dispMat.convertTo(f.disparity_u16, CV_16UC1, 256.0);
-            } else if (dispMat.type() == CV_16UC1) {
+            // disparity from DepthAI is usually 8 bit, but we store as 16 bit for consistency
+            cv::Mat dispMat = disp->getFrame(); // retrieve raw disparity frame
+            if (dispMat.type() == CV_8UC1) { // common 8-bit disparity format
+                dispMat.convertTo(f.disparity_u16, CV_16UC1, 256.0); // scale into 16-bit range
+            } else if (dispMat.type() == CV_16UC1) { // if already 16-bit
                 f.disparity_u16 = dispMat;
             } else {
-                dispMat.convertTo(f.disparity_u16, CV_16UC1);
+                dispMat.convertTo(f.disparity_u16, CV_16UC1); // fallback conversion
             }
 
-            const int total = f.disparity_u16.rows * f.disparity_u16.cols;
-            int valid = 0;
-            double sum = 0.0;
-            for (int y = 0; y < f.disparity_u16.rows; ++y) {
-                const uint16_t* row = f.disparity_u16.ptr<uint16_t>(y);
-                for (int x = 0; x < f.disparity_u16.cols; ++x) {
-                    const uint16_t d = row[x];
-                    if (d > 0) {
-                        valid += 1;
-                        sum += (double)d;
+            const int total = f.disparity_u16.rows * f.disparity_u16.cols; // total disparity pixels
+            int valid = 0; // count of non-zero disparity pixels
+            double sum = 0.0; // sum of valid disparity values
+            for (int y = 0; y < f.disparity_u16.rows; ++y) { // iterate rows
+                const uint16_t* row = f.disparity_u16.ptr<uint16_t>(y); // pointer to the current row
+                for (int x = 0; x < f.disparity_u16.cols; ++x) { // iterate columns
+                    const uint16_t d = row[x]; // disparity value at pixel
+                    if (d > 0) {  // consider only valid disparity
+                        valid += 1; // increment valid pixel count
+                        sum += (double)d; // accumulate disparity value
                     }
                 }
             }
-            f.depth_valid_ratio = total > 0 ? (float)valid / (float)total : 0.0f;
-            f.mean_disparity = valid > 0 ? (float)(sum / (double)valid) : 0.0f;
+            f.depth_valid_ratio = total > 0 ? (float)valid / (float)total : 0.0f; // ratio of valid depth pixels
+            f.mean_disparity = valid > 0 ? (float)(sum / (double)valid) : 0.0f; // mean disparity over valid pixels
 
             // Exposure and gain are not always available directly per frame in this API path
-            f.exposure_time_us = 0.0f;
-            f.analog_gain = 0.0f;
+            f.exposure_time_us = 0.0f; // placeholder exposure
+            f.analog_gain = 0.0f; // placeholder gain
 
-            cb(f);
+            cb(f); // deliver populated frame to user callback
         }
     });
 }
