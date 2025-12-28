@@ -4,7 +4,8 @@
             "name": "Mac",
             "includePath": [
                 "${workspaceFolder}/**",
-                "/opt/homebrew/include/opencv4"
+                "/opt/homebrew/include/opencv4",
+                "/depthai/pipeline/node"
             ],
             "defines": [],
             "compilerPath": "/usr/bin/clang",
