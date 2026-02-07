@@ -1,0 +1,19 @@
+# IDE 
+.vscode
+.clangd
+
+
+
+.DS_Store
+
+# Build
+build/
+compile_commands.json
+
+# Logs 
+logs/
+
+# ThirdParty build artifacts 
+thirdParty/depthai-core/build/
+thirdParty/depthai-install/
+
